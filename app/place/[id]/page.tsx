@@ -12,8 +12,10 @@ async function getPlace(id: string): Promise<Place | null> {
   return { id: docSnap.id, ...docSnap.data() } as Place;
 }
 
-export default async function PlacePage({ params }: { params: { id: string } }) {
-  const place = await getPlace(params.id);
+// A mudança principal: params agora é uma Promise
+export default async function PlacePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params; // Aguarda a Promise ser resolvida
+  const place = await getPlace(id);
   if (!place) notFound();
   
   return <PlaceDetailClient place={place} />;
