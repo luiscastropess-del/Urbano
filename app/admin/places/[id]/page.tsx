@@ -37,17 +37,22 @@ const placeSchema = z.object({
   price: z.number().min(1).max(4),
   openingHours: z.string().min(1, 'Horário de funcionamento obrigatório'),
   openingDays: z.string().min(1, 'Dias de funcionamento obrigatório'),
-  phone: z.string().optional(),
-  whatsapp: z.string().optional(),
-  instagram: z.string().optional(),
-  facebook: z.string().optional(),
-  website: z.string().optional(),
+  phone: z.string().default(''),
+  whatsapp: z.string().default(''),
+  address: z.string().min(5, 'Endereço obrigatório'),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  instagram: z.string().default(''),
+  facebook: z.string().default(''),
+  website: z.string().default(''),
   tags: z.array(z.string()).default([]),
   published: z.boolean().default(true),
   featured: z.boolean().default(false),
 });
 
-type PlaceFormData = z.infer<typeof placeSchema>;
+// Define explicitamente os tipos de entrada e saída
+type FormInputType = z.input<typeof placeSchema>;
+type FormOutputType = z.output<typeof placeSchema>;
 
 // Componente de seleção de localização
 function LocationPicker({ value, onChange }: { value: { lat: number; lng: number }; onChange: (pos: { lat: number; lng: number }) => void }) {
@@ -85,7 +90,8 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
   const [existingGallery, setExistingGallery] = useState<string[]>([]);
   const [id, setId] = useState<string>('');
   
-  const { register, handleSubmit, control, setValue, watch, reset } = useForm<PlaceFormData>({
+  // Ajuste CRÍTICO: useForm com os tipos de entrada e saída
+  const { register, handleSubmit, control, setValue, watch, reset } = useForm<FormInputType, any, FormOutputType>({
     resolver: zodResolver(placeSchema),
     defaultValues: {
       title: '',
@@ -196,7 +202,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
   
-  const onSubmit = async (data: PlaceFormData) => {
+  const onSubmit = async (data: FormOutputType) => {
     setIsSaving(true);
     try {
       const updates: any = {
@@ -459,4 +465,4 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       </form>
     </div>
   );
-}
+      }
