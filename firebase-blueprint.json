@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Place": {
+      "title": "Place",
+      "description": "A location in the city",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["restaurant", "bar", "park", "event", "culture"] },
+        "description": { "type": "string" },
+        "address": { "type": "string" },
+        "rating": { "type": "number" },
+        "priceRange": { "type": "number", "description": "1 to 4" },
+        "openingHours": { "type": "string" },
+        "image": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "featured": { "type": "boolean" }
+      },
+      "required": ["name", "category", "lat", "lng"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A user review for a place",
+      "type": "object",
+      "properties": {
+        "placeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["placeId", "userId", "rating", "comment"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "A user's saved place",
+      "type": "object",
+      "properties": {
+        "placeId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["placeId"]
+    },
+    "User": {
+      "title": "User",
+      "description": "App user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/places/{placeId}": {
+      "schema": "Place",
+      "description": "Collection of city locations"
+    },
+    "/places/{placeId}/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Reviews for a specific place"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{userId}/favorites/{placeId}": {
+      "schema": "Favorite",
+      "description": "User's favorite places"
+    }
+  }
+}

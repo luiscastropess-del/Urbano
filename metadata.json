@@ -1,0 +1,6 @@
+{
+  "name": "Urbano - Guia da Cidade",
+  "description": "Descubra os melhores restaurantes, bares, praças e eventos da sua cidade com recomendações inteligentes.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}
