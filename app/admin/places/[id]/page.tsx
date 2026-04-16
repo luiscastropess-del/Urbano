@@ -278,31 +278,46 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black">Editar Lugar</h1>
         <div className="flex gap-3">
-          <AlertDialog>
-  <AlertDialogTrigger>
-    <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
-      <Trash2 className="w-4 h-4 mr-2" />Excluir
-    </Button>
-  </AlertDialogTrigger>
-</AlertDialog>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
-                <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-error hover:bg-error/90">Sim, excluir</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          
-          <Button variant="outline" onClick={() => router.back()}>Cancelar</Button>
-          <Button onClick={handleSubmit(onSubmit)} className="btn-pop" disabled={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
-            {isSaving ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </div>
+  <AlertDialog>
+    <AlertDialogTrigger asChild>
+      <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
+        <Trash2 className="w-4 h-4 mr-2" />Excluir
+      </Button>
+    </AlertDialogTrigger>
+
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
+        <AlertDialogDescription>
+          Esta ação não pode ser desfeita.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+
+      <AlertDialogFooter>
+        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+        <AlertDialogAction
+          onClick={handleDelete}
+          className="bg-error hover:bg-error/90"
+        >
+          Sim, excluir
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <Button variant="outline" onClick={() => router.back()}>
+    Cancelar
+  </Button>
+
+  <Button
+    onClick={handleSubmit(onSubmit)}
+    className="btn-pop"
+    disabled={isSaving}
+  >
+    <Save className="w-4 h-4 mr-2" />
+    {isSaving ? 'Salvando...' : 'Salvar'}
+  </Button>
+</div>
       </div>
       
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
