@@ -21,14 +21,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-// Corrigir ícone do Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Esquema Zod com valores padrão adequados
 const placeSchema = z.object({
   title: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
   summary: z.string().max(200, 'Resumo deve ter no máximo 200 caracteres'),
@@ -50,14 +48,11 @@ const placeSchema = z.object({
   featured: z.boolean().default(false),
 });
 
-// Define explicitamente os tipos de entrada e saída
 type FormInputType = z.input<typeof placeSchema>;
 type FormOutputType = z.output<typeof placeSchema>;
 
-// Componente de seleção de localização
 function LocationPicker({ value, onChange }: { value: { lat: number; lng: number }; onChange: (pos: { lat: number; lng: number }) => void }) {
   const [position, setPosition] = useState(value);
-  
   function MapEvents() {
     useMapEvents({
       click(e) {
@@ -68,7 +63,6 @@ function LocationPicker({ value, onChange }: { value: { lat: number; lng: number
     });
     return null;
   }
-  
   return (
     <MapContainer center={[value.lat, value.lng]} zoom={15} style={{ height: '300px', width: '100%' }} className="rounded-lg">
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -89,8 +83,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [existingGallery, setExistingGallery] = useState<string[]>([]);
   const [id, setId] = useState<string>('');
-  
-  // Ajuste CRÍTICO: useForm com os tipos de entrada e saída
+
   const { register, handleSubmit, control, setValue, watch, reset } = useForm<FormInputType, any, FormOutputType>({
     resolver: zodResolver(placeSchema),
     defaultValues: {
@@ -114,8 +107,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       featured: false,
     },
   });
-  
-  // Resolver parâmetros (Promise no Next.js 15)
+
   useEffect(() => {
     async function resolveParams() {
       const { id: resolvedId } = await params;
@@ -123,8 +115,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
     }
     resolveParams();
   }, [params]);
-  
-  // Carregar dados do lugar
+
   useEffect(() => {
     if (!id) return;
     async function loadPlace() {
@@ -135,7 +126,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
           router.push('/admin/places');
           return;
         }
-        
         reset({
           title: place.title,
           summary: place.summary,
@@ -156,7 +146,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
           published: place.published,
           featured: place.featured,
         });
-        
         setExistingMainImage(place.imageUrl);
         setMainImagePreview(place.imageUrl);
         setExistingGallery(place.gallery || []);
@@ -170,7 +159,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
     }
     loadPlace();
   }, [id, reset, router]);
-  
+
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -179,20 +168,17 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       setExistingMainImage('');
     }
   };
-  
   const removeMainImage = () => {
     setMainImageFile(null);
     setMainImagePreview('');
     setExistingMainImage('');
   };
-  
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setGalleryFiles(prev => [...prev, ...files]);
     const newPreviews = files.map(f => URL.createObjectURL(f));
     setGalleryPreviews(prev => [...prev, ...newPreviews]);
   };
-  
   const removeGalleryImage = (index: number, isExisting: boolean) => {
     if (isExisting) {
       setExistingGallery(prev => prev.filter((_, i) => i !== index));
@@ -201,7 +187,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
     }
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   const onSubmit = async (data: FormOutputType) => {
     setIsSaving(true);
     try {
@@ -220,30 +206,22 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
           facebook: data.facebook || undefined,
           website: data.website || undefined,
         },
-        location: {
-          lat: data.lat,
-          lng: data.lng,
-          address: data.address,
-        },
+        location: { lat: data.lat, lng: data.lng, address: data.address },
         tags: data.tags,
         published: data.published,
         featured: data.featured,
       };
-      
       if (mainImageFile) {
         const newUrl = await uploadPlaceImage(mainImageFile, id, 'main');
         updates.imageUrl = newUrl;
       } else if (!existingMainImage) {
         updates.imageUrl = '';
       }
-      
       let newGalleryUrls: string[] = [];
       if (galleryFiles.length > 0) {
         newGalleryUrls = await uploadGalleryImages(galleryFiles, id);
       }
-      
       updates.gallery = [...existingGallery, ...newGalleryUrls];
-      
       await updatePlace(id, updates);
       router.push('/admin/places');
     } catch (error) {
@@ -253,7 +231,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       setIsSaving(false);
     }
   };
-  
+
   const handleDelete = async () => {
     if (!confirm('Tem certeza que deseja excluir permanentemente este lugar?')) return;
     try {
@@ -264,7 +242,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       alert('Erro ao excluir');
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -272,54 +250,37 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       </div>
     );
   }
-  
+
   return (
     <div className="max-w-5xl mx-auto pb-20">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black">Editar Lugar</h1>
         <div className="flex gap-3">
-  <AlertDialog>
-    <AlertDialogTrigger>
-      <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
-        <Trash2 className="w-4 h-4 mr-2" />Excluir
-      </Button>
-    </AlertDialogTrigger>
-
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
-        <AlertDialogDescription>
-          Esta ação não pode ser desfeita.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-
-      <AlertDialogFooter>
-        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-        <AlertDialogAction
-          onClick={handleDelete}
-          className="bg-error hover:bg-error/90"
-        >
-          Sim, excluir
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
-
-  <Button variant="outline" onClick={() => router.back()}>
-    Cancelar
-  </Button>
-
-  <Button
-    onClick={handleSubmit(onSubmit)}
-    className="btn-pop"
-    disabled={isSaving}
-  >
-    <Save className="w-4 h-4 mr-2" />
-    {isSaving ? 'Salvando...' : 'Salvar'}
-  </Button>
-</div>
+          <AlertDialog>
+            <AlertDialogTrigger>
+              <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
+                <Trash2 className="w-4 h-4 mr-2" />Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
+                <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-error hover:bg-error/90">Sim, excluir</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button variant="outline" onClick={() => router.back()}>Cancelar</Button>
+          <Button onClick={handleSubmit(onSubmit)} className="btn-pop" disabled={isSaving}>
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving ? 'Salvando...' : 'Salvar'}
+          </Button>
+        </div>
       </div>
-      
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-white/50 p-1 rounded-full">
@@ -328,7 +289,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
             <TabsTrigger value="location" className="rounded-full">Localização</TabsTrigger>
             <TabsTrigger value="advanced" className="rounded-full">Avançado</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="basic" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Informações principais</CardTitle></CardHeader>
@@ -336,7 +297,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                 <div><label className="block font-semibold mb-2">Título *</label><Input {...register('title')} placeholder="Nome do local" /></div>
                 <div><label className="block font-semibold mb-2">Resumo *</label><Textarea {...register('summary')} placeholder="Breve descrição" rows={3} /></div>
                 <div><label className="block font-semibold mb-2">Descrição completa *</label><Textarea {...register('description')} placeholder="Escreva a descrição completa aqui..." className="min-h-[300px]" /></div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-2">Categoria *</label>
@@ -352,7 +312,10 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                   <div>
                     <label className="block font-semibold mb-2">Faixa de preço *</label>
                     <Controller name="price" control={control} render={({ field }) => (
-                      <Select onValueChange={(v) => field.onChange(parseInt(v))} value={field.value.toString()}>
+                      <Select
+                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        value={field.value != null ? field.value.toString() : '2'}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="1">💰 Econômico</SelectItem>
@@ -364,7 +327,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                     )} />
                   </div>
                 </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block font-semibold mb-2">Horário *</label><Input {...register('openingHours')} placeholder="Ex: 12:00 - 23:00" /></div>
                   <div><label className="block font-semibold mb-2">Dias *</label><Input {...register('openingDays')} placeholder="Ex: Terça a Domingo" /></div>
@@ -372,7 +334,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="media" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Imagens</CardTitle></CardHeader>
@@ -391,7 +353,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                     <div><Input type="file" accept="image/*" onChange={handleMainImageChange} /></div>
                   </div>
                 </div>
-                
                 <div>
                   <label className="block font-semibold mb-2">Galeria de imagens</label>
                   <div className="space-y-3">
@@ -416,7 +377,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="location" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Endereço e Mapa</CardTitle></CardHeader>
@@ -437,7 +398,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="advanced" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Contato e Redes Sociais</CardTitle></CardHeader>
@@ -451,7 +412,6 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                 <div><label className="block font-semibold mb-2">Website</label><Input {...register('website')} placeholder="https://..." /></div>
               </CardContent>
             </Card>
-            
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Tags e Opções</CardTitle></CardHeader>
               <CardContent className="space-y-6">
@@ -472,8 +432,14 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                     )}
                   />
                 </div>
-                <div className="flex items-center justify-between"><div><label className="font-semibold">Publicado</label><p className="text-sm text-text-soft">Visível para todos</p></div><Controller name="published" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} /></div>
-                <div className="flex items-center justify-between"><div><label className="font-semibold">Destaque</label><p className="text-sm text-text-soft">Aparece nos destaques</p></div><Controller name="featured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} /></div>
+                <div className="flex items-center justify-between">
+                  <div><label className="font-semibold">Publicado</label><p className="text-sm text-text-soft">Visível para todos</p></div>
+                  <Controller name="published" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div><label className="font-semibold">Destaque</label><p className="text-sm text-text-soft">Aparece nos destaques</p></div>
+                  <Controller name="featured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -481,4 +447,4 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       </form>
     </div>
   );
-      }
+  }
