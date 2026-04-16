@@ -27,6 +27,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+// Esquema Zod corrigido
 const placeSchema = z.object({
   title: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
   summary: z.string().max(200, 'Resumo deve ter no máximo 200 caracteres'),
@@ -43,6 +44,7 @@ const placeSchema = z.object({
   instagram: z.string().url().optional().or(z.literal('')),
   facebook: z.string().url().optional().or(z.literal('')),
   website: z.string().url().optional().or(z.literal('')),
+  // Correção: tags é uma string no formulário, mas será transformada em array
   tags: z.string().transform(str => str.split(',').map(t => t.trim()).filter(Boolean)),
   published: z.boolean().default(true),
   featured: z.boolean().default(false),
@@ -93,7 +95,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       price: 2,
       published: true,
       featured: false,
-      tags: [],
+      tags: [], // Inicializa como array vazio
     },
   });
   
@@ -132,7 +134,7 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
           instagram: place.socialMedia.instagram || '',
           facebook: place.socialMedia.facebook || '',
           website: place.socialMedia.website || '',
-          tags: place.tags.join(', '),
+          tags: place.tags.join(', '), // Transforma array em string para o campo
           published: place.published,
           featured: place.featured,
         });
@@ -429,4 +431,4 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       </form>
     </div>
   );
-}
+  }
