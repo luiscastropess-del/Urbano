@@ -7,7 +7,7 @@ import { getPlaceById, updatePlace } from '@/lib/services/place.service';
 
 export default function EditPlacePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const [data, setData] = useState<any>();
+  const [data, setData] = useState<any>(null);
   const [id, setId] = useState('');
 
   useEffect(() => {
@@ -35,4 +35,4 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
       <PlaceForm initialData={data} onSubmit={handleSubmit} />
     </div>
   );
-}
+  }
