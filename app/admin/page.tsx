@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { db } from '@/lib/firebase';
 import { collection, getCountFromServer, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -31,12 +32,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function loadStats() {
       try {
-        // Contagens
         const placesSnap = await getCountFromServer(collection(db, 'places'));
         const reviewsSnap = await getCountFromServer(collection(db, 'reviews'));
         const usersSnap = await getCountFromServer(collection(db, 'users'));
 
-        // Média de avaliações
         const placesQuery = query(collection(db, 'places'), where('published', '==', true));
         const placesDocs = await getDocs(placesQuery);
         let totalRating = 0;
@@ -50,7 +49,6 @@ export default function AdminDashboard() {
         });
         const avgRating = ratedPlaces > 0 ? totalRating / ratedPlaces : 0;
 
-        // Avaliações recentes (últimas 5)
         const recentQuery = query(collection(db, 'reviews'), where('createdAt', '!=', null));
         const recentSnap = await getDocs(recentQuery);
         const recent = recentSnap.docs
@@ -117,7 +115,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Avaliações Recentes */}
             <Card className="fun-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -159,7 +156,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Ações Rápidas */}
             <Card className="fun-card border-0">
               <CardHeader>
                 <CardTitle>Ações Rápidas</CardTitle>
@@ -190,4 +186,4 @@ export default function AdminDashboard() {
       )}
     </div>
   );
-    }
+          }
