@@ -1,38 +1,37 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { getPlaceById } from '@/lib/services/place.service';
 import { PlaceForm } from '@/components/forms/PlaceForm';
-import { getPlaceById, updatePlace } from '@/lib/services/place.service';
+import { updatePlace } from '@/lib/services/place.service';
+import { redirect } from 'next/navigation';
 
-export default function EditPlacePage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter();
-  const [data, setData] = useState<any>(null);
-  const [id, setId] = useState('');
+export default async function EditPlacePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
-  useEffect(() => {
-    async function init() {
-      const { id } = await params;
-      setId(id);
+  const place = await getPlaceById(id);
 
-      const place = await getPlaceById(id);
-      setData(place);
-    }
+  if (!place) {
+    return <div>Não encontrado</div>;
+  }
 
-    init();
-  }, [params]);
+  async function handleSubmit(data: any) {
+    'use server';
 
-  const handleSubmit = async (formData: any) => {
-    await updatePlace(id, formData);
-    router.push('/admin/places');
-  };
+    await updatePlace(id, data);
 
-  if (!data) return <div>Carregando...</div>;
+    redirect('/admin/places');
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
       <h1>Editar Lugar</h1>
-      <PlaceForm initialData={data} onSubmit={handleSubmit} />
+
+      <PlaceForm
+        initialData={place}
+        action={handleSubmit}
+      />
     </div>
   );
-  }
+}
