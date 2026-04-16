@@ -189,7 +189,7 @@ export default function AdminReviewsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
+                          <AlertDialogTrigger>
                             <Button variant="ghost" size="sm" className="text-error hover:text-error/80">
                               <Trash2 className="w-4 h-4" />
                             </Button>
