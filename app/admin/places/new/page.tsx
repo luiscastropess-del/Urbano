@@ -15,7 +15,7 @@ export default function NewPlacePage() {
   return (
     <div className="max-w-4xl mx-auto">
       <h1>Novo Lugar</h1>
-      <PlaceForm onSubmit={handleSubmit} />
+      <PlaceForm action={handleSubmit} />
     </div>
   );
 }
