@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 
 export function PlaceForm({
   initialData,
-  onSubmit,
+  action,
 }: {
   initialData?: Partial<PlaceInput>;
-  onSubmit: (data: PlaceOutput) => Promise<void>;
+  action: (data: PlaceOutput) => Promise<void>;
 }) {
   const { register, handleSubmit, control } = useForm<
     PlaceInput,
@@ -30,11 +30,6 @@ export function PlaceForm({
       address: '',
       lat: -23.5505,
       lng: -46.6333,
-      phone: '',
-      whatsapp: '',
-      instagram: '',
-      facebook: '',
-      website: '',
       tags: [],
       published: true,
       featured: false,
@@ -43,17 +38,15 @@ export function PlaceForm({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(action)} className="space-y-4">
       <Input {...register('title')} placeholder="Título" />
-      <Input {...register('summary')} placeholder="Resumo" />
 
-      {/* ✅ TAGS CORRIGIDO */}
+      {/* TAGS */}
       <Controller
         name="tags"
         control={control}
         render={({ field }) => (
           <Input
-            placeholder="romântico, vista, premium"
             value={field.value?.join(', ') || ''}
             onChange={(e) => {
               const tags = e.target.value
@@ -67,7 +60,7 @@ export function PlaceForm({
         )}
       />
 
-      {/* ✅ PRICE CORRIGIDO */}
+      {/* PRICE */}
       <Controller
         name="price"
         control={control}
@@ -87,4 +80,4 @@ export function PlaceForm({
       <Button type="submit">Salvar</Button>
     </form>
   );
-        }
+}
