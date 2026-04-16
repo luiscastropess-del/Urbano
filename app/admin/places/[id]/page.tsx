@@ -313,7 +313,12 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
                     <label className="block font-semibold mb-2">Faixa de preço *</label>
                     <Controller name="price" control={control} render={({ field }) => (
                       <Select
-                        onValueChange={(v) => field.onChange(parseInt(v))}
+                        onValueChange={(v) => {
+  const value = Number(v);
+  if (!isNaN(value)) {
+    field.onChange(value);
+  }
+}}
                         value={field.value != null ? field.value.toString() : '2'}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
