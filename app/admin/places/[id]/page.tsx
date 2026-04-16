@@ -279,11 +279,12 @@ export default function EditPlacePage({ params }: { params: Promise<{ id: string
         <h1 className="text-3xl font-black">Editar Lugar</h1>
         <div className="flex gap-3">
           <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
-                <Trash2 className="w-4 h-4 mr-2" />Excluir
-              </Button>
-            </AlertDialogTrigger>
+  <AlertDialogTrigger asChild>
+    <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
+      <Trash2 className="w-4 h-4 mr-2" />Excluir
+    </Button>
+  </AlertDialogTrigger>
+</AlertDialog>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
