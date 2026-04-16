@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Editor } from 'novel';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Upload, X, Plus, Trash2, Save } from 'lucide-react';
+import { Upload, X, Plus, Save } from 'lucide-react';
 
 import { createPlace, uploadPlaceImage, uploadGalleryImages, updatePlace } from '@/lib/firebase-services';
 import { categories } from '@/lib/data';
@@ -18,19 +17,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Corrigir ícone do Leaflet no Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Schema de validação
 const placeSchema = z.object({
   title: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
   summary: z.string().max(200, 'Resumo deve ter no máximo 200 caracteres'),
@@ -54,7 +49,6 @@ const placeSchema = z.object({
 
 type PlaceFormData = z.infer<typeof placeSchema>;
 
-// Componente para selecionar localização no mapa
 function LocationPicker({ value, onChange }: { value: { lat: number; lng: number }; onChange: (pos: { lat: number; lng: number }) => void }) {
   const [position, setPosition] = useState(value);
   
@@ -85,7 +79,6 @@ export default function NewPlacePage() {
   const [mainImagePreview, setMainImagePreview] = useState<string>('');
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [jsonContent, setJsonContent] = useState<string>('{}'); // Para o editor Novel
   
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<PlaceFormData>({
     resolver: zodResolver(placeSchema),
@@ -101,7 +94,6 @@ export default function NewPlacePage() {
   
   const location = watch(['lat', 'lng']);
   
-  // Handlers de imagem principal
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -115,7 +107,6 @@ export default function NewPlacePage() {
     setMainImagePreview('');
   };
   
-  // Handlers da galeria
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setGalleryFiles(prev => [...prev, ...files]);
@@ -131,7 +122,6 @@ export default function NewPlacePage() {
   const onSubmit = async (data: PlaceFormData) => {
     setIsLoading(true);
     try {
-      // 1. Criar o documento base (sem imagens)
       const placeId = await createPlace({
         title: data.title,
         summary: data.summary,
@@ -158,25 +148,21 @@ export default function NewPlacePage() {
         featured: data.featured,
       });
       
-      // 2. Upload da imagem principal
       let mainImageUrl = '';
       if (mainImageFile) {
         mainImageUrl = await uploadPlaceImage(mainImageFile, placeId, 'main');
       }
       
-      // 3. Upload das imagens da galeria
       let galleryUrls: string[] = [];
       if (galleryFiles.length > 0) {
         galleryUrls = await uploadGalleryImages(galleryFiles, placeId);
       }
       
-      // 4. Atualizar o documento com as URLs
       await updatePlace(placeId, {
         imageUrl: mainImageUrl,
         gallery: galleryUrls,
       });
       
-      // Redirecionar para a lista
       router.push('/admin/places');
     } catch (error) {
       console.error('Erro ao criar lugar:', error);
@@ -208,7 +194,6 @@ export default function NewPlacePage() {
             <TabsTrigger value="advanced" className="rounded-full">Avançado</TabsTrigger>
           </TabsList>
           
-          {/* Aba Básica */}
           <TabsContent value="basic" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Informações principais</CardTitle></CardHeader>
@@ -228,19 +213,10 @@ export default function NewPlacePage() {
                 
                 <div>
                   <label className="block font-semibold mb-2">Descrição completa *</label>
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <Editor
-                        defaultValue={field.value ? JSON.parse(field.value) : {}}
-                        onUpdate={(editor) => {
-                          const html = editor?.getHTML();
-                          field.onChange(html);
-                        }}
-                        className="min-h-[300px] border rounded-lg bg-white"
-                      />
-                    )}
+                  <Textarea
+                    {...register('description')}
+                    placeholder="Escreva a descrição completa aqui..."
+                    className="min-h-[300px]"
                   />
                   {errors.description && <p className="text-error text-sm mt-1">{errors.description.message}</p>}
                 </div>
@@ -264,7 +240,6 @@ export default function NewPlacePage() {
                         </Select>
                       )}
                     />
-                    {errors.category && <p className="text-error text-sm mt-1">{errors.category.message}</p>}
                   </div>
                   
                   <div>
@@ -293,19 +268,16 @@ export default function NewPlacePage() {
                   <div>
                     <label className="block font-semibold mb-2">Horário de funcionamento *</label>
                     <Input {...register('openingHours')} placeholder="Ex: 12:00 - 23:00" />
-                    {errors.openingHours && <p className="text-error text-sm mt-1">{errors.openingHours.message}</p>}
                   </div>
                   <div>
                     <label className="block font-semibold mb-2">Dias de funcionamento *</label>
                     <Input {...register('openingDays')} placeholder="Ex: Terça a Domingo" />
-                    {errors.openingDays && <p className="text-error text-sm mt-1">{errors.openingDays.message}</p>}
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Aba Mídia */}
           <TabsContent value="media" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Imagens</CardTitle></CardHeader>
@@ -350,14 +322,12 @@ export default function NewPlacePage() {
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
                       </label>
                     </div>
-                    <p className="text-xs text-text-soft">Múltiplas imagens podem ser selecionadas</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Aba Localização */}
           <TabsContent value="location" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Endereço e Mapa</CardTitle></CardHeader>
@@ -365,7 +335,6 @@ export default function NewPlacePage() {
                 <div>
                   <label className="block font-semibold mb-2">Endereço completo *</label>
                   <Input {...register('address')} placeholder="Rua, número, bairro, cidade" />
-                  {errors.address && <p className="text-error text-sm mt-1">{errors.address.message}</p>}
                 </div>
                 
                 <div>
@@ -404,7 +373,6 @@ export default function NewPlacePage() {
             </Card>
           </TabsContent>
           
-          {/* Aba Avançada */}
           <TabsContent value="advanced" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Contato e Redes Sociais</CardTitle></CardHeader>
@@ -416,22 +384,12 @@ export default function NewPlacePage() {
                   </div>
                   <div>
                     <label className="block font-semibold mb-2">WhatsApp</label>
-                    <Input {...register('whatsapp')} placeholder="5511999999999 (apenas números)" />
+                    <Input {...register('whatsapp')} placeholder="5511999999999" />
                   </div>
                 </div>
-                
-                <div>
-                  <label className="block font-semibold mb-2">Instagram</label>
-                  <Input {...register('instagram')} placeholder="https://instagram.com/..." />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">Facebook</label>
-                  <Input {...register('facebook')} placeholder="https://facebook.com/..." />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">Website</label>
-                  <Input {...register('website')} placeholder="https://..." />
-                </div>
+                <div><label className="block font-semibold mb-2">Instagram</label><Input {...register('instagram')} placeholder="https://instagram.com/..." /></div>
+                <div><label className="block font-semibold mb-2">Facebook</label><Input {...register('facebook')} placeholder="https://facebook.com/..." /></div>
+                <div><label className="block font-semibold mb-2">Website</label><Input {...register('website')} placeholder="https://..." /></div>
               </CardContent>
             </Card>
             
@@ -444,31 +402,13 @@ export default function NewPlacePage() {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div>
-                    <label className="font-semibold">Publicado</label>
-                    <p className="text-sm text-text-soft">Visível para todos os usuários</p>
-                  </div>
-                  <Controller
-                    name="published"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
+                  <div><label className="font-semibold">Publicado</label><p className="text-sm text-text-soft">Visível para todos</p></div>
+                  <Controller name="published" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div>
-                    <label className="font-semibold">Destaque</label>
-                    <p className="text-sm text-text-soft">Aparece na seção de destaques da home</p>
-                  </div>
-                  <Controller
-                    name="featured"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
+                  <div><label className="font-semibold">Destaque</label><p className="text-sm text-text-soft">Aparece nos destaques da home</p></div>
+                  <Controller name="featured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
                 </div>
               </CardContent>
             </Card>

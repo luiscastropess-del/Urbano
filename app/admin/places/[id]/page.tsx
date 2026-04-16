@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Editor } from 'novel';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -22,7 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-// Corrigir ícone do Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -75,7 +73,7 @@ function LocationPicker({ value, onChange }: { value: { lat: number; lng: number
   );
 }
 
-export default function EditPlacePage({ params }: { params: { id: string } }) {
+export default function EditPlacePage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -85,9 +83,9 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [existingGallery, setExistingGallery] = useState<string[]>([]);
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [id, setId] = useState<string>('');
   
-  const { register, handleSubmit, control, setValue, watch, reset, formState: { errors } } = useForm<PlaceFormData>({
+  const { register, handleSubmit, control, setValue, watch, reset } = useForm<PlaceFormData>({
     resolver: zodResolver(placeSchema),
     defaultValues: {
       lat: -23.5505,
@@ -99,20 +97,25 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
     },
   });
   
-  const location = watch(['lat', 'lng']);
-  
-  // Carregar dados do lugar
   useEffect(() => {
+    async function resolveParams() {
+      const { id: resolvedId } = await params;
+      setId(resolvedId);
+    }
+    resolveParams();
+  }, [params]);
+  
+  useEffect(() => {
+    if (!id) return;
     async function loadPlace() {
       try {
-        const place = await getPlaceById(params.id);
+        const place = await getPlaceById(id);
         if (!place) {
           alert('Lugar não encontrado');
           router.push('/admin/places');
           return;
         }
         
-        // Preencher formulário
         reset({
           title: place.title,
           summary: place.summary,
@@ -146,14 +149,14 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
       }
     }
     loadPlace();
-  }, [params.id, reset, router]);
+  }, [id, reset, router]);
   
   const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setMainImageFile(file);
       setMainImagePreview(URL.createObjectURL(file));
-      setExistingMainImage(''); // Indica que a imagem principal será substituída
+      setExistingMainImage('');
     }
   };
   
@@ -170,10 +173,9 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
     setGalleryPreviews(prev => [...prev, ...newPreviews]);
   };
   
-  const removeGalleryImage = (index: number, isExisting: boolean, url?: string) => {
-    if (isExisting && url) {
-      setExistingGallery(prev => prev.filter(u => u !== url));
-      setImagesToDelete(prev => [...prev, url]);
+  const removeGalleryImage = (index: number, isExisting: boolean) => {
+    if (isExisting) {
+      setExistingGallery(prev => prev.filter((_, i) => i !== index));
     } else {
       setGalleryFiles(prev => prev.filter((_, i) => i !== index));
     }
@@ -208,28 +210,21 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
         featured: data.featured,
       };
       
-      // Upload da nova imagem principal (se houver)
       if (mainImageFile) {
-        const newUrl = await uploadPlaceImage(mainImageFile, params.id, 'main');
+        const newUrl = await uploadPlaceImage(mainImageFile, id, 'main');
         updates.imageUrl = newUrl;
       } else if (!existingMainImage) {
-        // Se removeu a imagem principal, definir como vazia
         updates.imageUrl = '';
       }
       
-      // Upload de novas imagens da galeria
       let newGalleryUrls: string[] = [];
       if (galleryFiles.length > 0) {
-        newGalleryUrls = await uploadGalleryImages(galleryFiles, params.id);
+        newGalleryUrls = await uploadGalleryImages(galleryFiles, id);
       }
       
-      // Combinar galeria existente (não removida) com as novas
-      const finalGallery = [...existingGallery, ...newGalleryUrls];
-      updates.gallery = finalGallery;
+      updates.gallery = [...existingGallery, ...newGalleryUrls];
       
-      await updatePlace(params.id, updates);
-      
-      // Redirecionar
+      await updatePlace(id, updates);
       router.push('/admin/places');
     } catch (error) {
       console.error(error);
@@ -240,9 +235,9 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
   };
   
   const handleDelete = async () => {
-    if (!confirm('Tem certeza que deseja excluir permanentemente este lugar? Esta ação não pode ser desfeita.')) return;
+    if (!confirm('Tem certeza que deseja excluir permanentemente este lugar?')) return;
     try {
-      await deletePlace(params.id);
+      await deletePlace(id);
       router.push('/admin/places');
     } catch (error) {
       console.error(error);
@@ -266,22 +261,17 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="text-error border-error/30 hover:bg-error/10">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Excluir
+                <Trash2 className="w-4 h-4 mr-2" />Excluir
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir lugar?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. Todas as avaliações e imagens associadas também serão removidas.
-                </AlertDialogDescription>
+                <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-error hover:bg-error/90">
-                  Sim, excluir
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleDelete} className="bg-error hover:bg-error/90">Sim, excluir</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -303,101 +293,50 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
             <TabsTrigger value="advanced" className="rounded-full">Avançado</TabsTrigger>
           </TabsList>
           
-          {/* Aba Básica – idêntica à da criação, mas com valores preenchidos */}
           <TabsContent value="basic" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Informações principais</CardTitle></CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <label className="block font-semibold mb-2">Título *</label>
-                  <Input {...register('title')} placeholder="Nome do local" />
-                  {errors.title && <p className="text-error text-sm mt-1">{errors.title.message}</p>}
-                </div>
-                
-                <div>
-                  <label className="block font-semibold mb-2">Resumo *</label>
-                  <Textarea {...register('summary')} placeholder="Breve descrição (aparece no card)" rows={3} />
-                  {errors.summary && <p className="text-error text-sm mt-1">{errors.summary.message}</p>}
-                  <p className="text-text-soft text-xs mt-1">Máximo 200 caracteres</p>
-                </div>
-                
-                <div>
-                  <label className="block font-semibold mb-2">Descrição completa *</label>
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <Editor
-                        defaultValue={field.value ? (() => { try { return JSON.parse(field.value); } catch { return {}; } })() : {}}
-                        onUpdate={(editor) => {
-                          const html = editor?.getHTML();
-                          field.onChange(html);
-                        }}
-                        className="min-h-[300px] border rounded-lg bg-white"
-                      />
-                    )}
-                  />
-                  {errors.description && <p className="text-error text-sm mt-1">{errors.description.message}</p>}
-                </div>
+                <div><label className="block font-semibold mb-2">Título *</label><Input {...register('title')} placeholder="Nome do local" /></div>
+                <div><label className="block font-semibold mb-2">Resumo *</label><Textarea {...register('summary')} placeholder="Breve descrição" rows={3} /></div>
+                <div><label className="block font-semibold mb-2">Descrição completa *</label><Textarea {...register('description')} placeholder="Escreva a descrição completa aqui..." className="min-h-[300px]" /></div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-2">Categoria *</label>
-                    <Controller
-                      name="category"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.filter(c => c.name !== 'Todos').map(cat => (
-                              <SelectItem key={cat.id} value={cat.name}>{cat.icon} {cat.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <Controller name="category" control={control} render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.filter(c => c.name !== 'Todos').map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.icon} {cat.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )} />
                   </div>
-                  
                   <div>
                     <label className="block font-semibold mb-2">Faixa de preço *</label>
-                    <Controller
-                      name="price"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={(v) => field.onChange(parseInt(v))} value={field.value.toString()}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">💰 Econômico</SelectItem>
-                            <SelectItem value="2">💰💰 Moderado</SelectItem>
-                            <SelectItem value="3">💰💰💰 Alto</SelectItem>
-                            <SelectItem value="4">💰💰💰💰 Luxo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <Controller name="price" control={control} render={({ field }) => (
+                      <Select onValueChange={(v) => field.onChange(parseInt(v))} value={field.value.toString()}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">💰 Econômico</SelectItem>
+                          <SelectItem value="2">💰💰 Moderado</SelectItem>
+                          <SelectItem value="3">💰💰💰 Alto</SelectItem>
+                          <SelectItem value="4">💰💰💰💰 Luxo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )} />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-2">Horário de funcionamento *</label>
-                    <Input {...register('openingHours')} placeholder="Ex: 12:00 - 23:00" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-2">Dias de funcionamento *</label>
-                    <Input {...register('openingDays')} placeholder="Ex: Terça a Domingo" />
-                  </div>
+                  <div><label className="block font-semibold mb-2">Horário *</label><Input {...register('openingHours')} placeholder="Ex: 12:00 - 23:00" /></div>
+                  <div><label className="block font-semibold mb-2">Dias *</label><Input {...register('openingDays')} placeholder="Ex: Terça a Domingo" /></div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Aba Mídia – exibe imagens existentes e permite upload de novas */}
           <TabsContent value="media" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Imagens</CardTitle></CardHeader>
@@ -408,19 +347,12 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
                     {mainImagePreview ? (
                       <div className="relative w-40 h-40 rounded-xl overflow-hidden border">
                         <img src={mainImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                        <button type="button" onClick={removeMainImage} className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white">
-                          <X className="w-4 h-4" />
-                        </button>
+                        <button type="button" onClick={removeMainImage} className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white"><X className="w-4 h-4" /></button>
                       </div>
                     ) : (
-                      <div className="w-40 h-40 rounded-xl bg-white/30 border-2 border-dashed flex items-center justify-center text-text-soft">
-                        <Upload className="w-8 h-8" />
-                      </div>
+                      <div className="w-40 h-40 rounded-xl bg-white/30 border-2 border-dashed flex items-center justify-center text-text-soft"><Upload className="w-8 h-8" /></div>
                     )}
-                    <div>
-                      <Input type="file" accept="image/*" onChange={handleMainImageChange} />
-                      <p className="text-xs text-text-soft mt-2">Tamanho recomendado: 800x600px</p>
-                    </div>
+                    <div><Input type="file" accept="image/*" onChange={handleMainImageChange} /></div>
                   </div>
                 </div>
                 
@@ -433,13 +365,7 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
                         return (
                           <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border">
                             <img src={preview} alt={`Galeria ${idx}`} className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => removeGalleryImage(idx, isExisting, isExisting ? preview : undefined)}
-                              className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
+                            <button type="button" onClick={() => removeGalleryImage(idx, isExisting)} className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white"><X className="w-3 h-3" /></button>
                           </div>
                         );
                       })}
@@ -449,125 +375,53 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
                       </label>
                     </div>
-                    <p className="text-xs text-text-soft">Múltiplas imagens podem ser selecionadas</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Aba Localização – idêntica à da criação */}
           <TabsContent value="location" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Endereço e Mapa</CardTitle></CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <label className="block font-semibold mb-2">Endereço completo *</label>
-                  <Input {...register('address')} placeholder="Rua, número, bairro, cidade" />
-                </div>
-                
+                <div><label className="block font-semibold mb-2">Endereço completo *</label><Input {...register('address')} placeholder="Rua, número, bairro, cidade" /></div>
                 <div>
                   <label className="block font-semibold mb-2">Clique no mapa para marcar a localização exata</label>
-                  <Controller
-                    name="lat"
-                    control={control}
-                    render={({ field }) => (
-                      <Controller
-                        name="lng"
-                        control={control}
-                        render={({ field: fieldLng }) => (
-                          <LocationPicker
-                            value={{ lat: field.value, lng: fieldLng.value }}
-                            onChange={(pos) => {
-                              field.onChange(pos.lat);
-                              fieldLng.onChange(pos.lng);
-                            }}
-                          />
-                        )}
-                      />
-                    )}
-                  />
+                  <Controller name="lat" control={control} render={({ field }) => (
+                    <Controller name="lng" control={control} render={({ field: fieldLng }) => (
+                      <LocationPicker value={{ lat: field.value, lng: fieldLng.value }} onChange={(pos) => { field.onChange(pos.lat); fieldLng.onChange(pos.lng); }} />
+                    )} />
+                  )} />
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <label className="block text-sm mb-1">Latitude</label>
-                      <Input {...register('lat', { valueAsNumber: true })} readOnly className="bg-white/50" />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Longitude</label>
-                      <Input {...register('lng', { valueAsNumber: true })} readOnly className="bg-white/50" />
-                    </div>
+                    <div><label className="block text-sm mb-1">Latitude</label><Input {...register('lat', { valueAsNumber: true })} readOnly className="bg-white/50" /></div>
+                    <div><label className="block text-sm mb-1">Longitude</label><Input {...register('lng', { valueAsNumber: true })} readOnly className="bg-white/50" /></div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
           
-          {/* Aba Avançada – idêntica à da criação */}
           <TabsContent value="advanced" className="space-y-6 mt-6">
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Contato e Redes Sociais</CardTitle></CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-2">Telefone</label>
-                    <Input {...register('phone')} placeholder="(11) 99999-9999" />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-2">WhatsApp</label>
-                    <Input {...register('whatsapp')} placeholder="5511999999999 (apenas números)" />
-                  </div>
+                  <div><label className="block font-semibold mb-2">Telefone</label><Input {...register('phone')} placeholder="(11) 99999-9999" /></div>
+                  <div><label className="block font-semibold mb-2">WhatsApp</label><Input {...register('whatsapp')} placeholder="5511999999999" /></div>
                 </div>
-                
-                <div>
-                  <label className="block font-semibold mb-2">Instagram</label>
-                  <Input {...register('instagram')} placeholder="https://instagram.com/..." />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">Facebook</label>
-                  <Input {...register('facebook')} placeholder="https://facebook.com/..." />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-2">Website</label>
-                  <Input {...register('website')} placeholder="https://..." />
-                </div>
+                <div><label className="block font-semibold mb-2">Instagram</label><Input {...register('instagram')} placeholder="https://instagram.com/..." /></div>
+                <div><label className="block font-semibold mb-2">Facebook</label><Input {...register('facebook')} placeholder="https://facebook.com/..." /></div>
+                <div><label className="block font-semibold mb-2">Website</label><Input {...register('website')} placeholder="https://..." /></div>
               </CardContent>
             </Card>
             
             <Card className="fun-card border-0">
               <CardHeader><CardTitle>Tags e Opções</CardTitle></CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <label className="block font-semibold mb-2">Tags (separadas por vírgula)</label>
-                  <Input {...register('tags')} placeholder="romântico, vista, premium" />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="font-semibold">Publicado</label>
-                    <p className="text-sm text-text-soft">Visível para todos os usuários</p>
-                  </div>
-                  <Controller
-                    name="published"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="font-semibold">Destaque</label>
-                    <p className="text-sm text-text-soft">Aparece na seção de destaques da home</p>
-                  </div>
-                  <Controller
-                    name="featured"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                  />
-                </div>
+                <div><label className="block font-semibold mb-2">Tags (separadas por vírgula)</label><Input {...register('tags')} placeholder="romântico, vista, premium" /></div>
+                <div className="flex items-center justify-between"><div><label className="font-semibold">Publicado</label><p className="text-sm text-text-soft">Visível para todos</p></div><Controller name="published" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} /></div>
+                <div className="flex items-center justify-between"><div><label className="font-semibold">Destaque</label><p className="text-sm text-text-soft">Aparece nos destaques</p></div><Controller name="featured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} /></div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -575,4 +429,4 @@ export default function EditPlacePage({ params }: { params: { id: string } }) {
       </form>
     </div>
   );
-  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Phone, MessageCircle, Instagram, Facebook, Globe, Star, Heart, ChevronLeft, Share2 } from 'lucide-react';
+import { MapPin, Clock, Phone, MessageCircle, Globe, Star, Heart, ChevronLeft, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Place, Review } from '@/lib/types';
@@ -12,8 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import MapView from '@/components/map-view';
-
-// 🆕 Novas importações da galeria e lightbox
 import PhotoAlbum from "react-photo-album";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
@@ -28,7 +26,6 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [userRating, setUserRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(-1);
   
   const isFavorite = favorites.has(place.id!);
@@ -43,25 +40,21 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
   
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Implementar autenticação e envio da review via createReview
     alert('Funcionalidade de review em desenvolvimento. Faça login para avaliar.');
   };
 
-  // 🆕 Preparar as fotos para o react-photo-album
   const photos = place.gallery?.map(url => ({
     src: url,
-    width: 400,  // Largura padrão, o componente ajusta automaticamente
-    height: 300, // Altura padrão, o componente ajusta automaticamente
+    width: 400,
+    height: 300,
   })) || [];
   
   return (
     <main className="min-h-screen bg-background">
-      {/* Header com imagem de capa */}
       <div className="relative h-[50vh] md:h-[60vh] w-full">
         <img src={place.imageUrl} alt={place.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         
-        {/* Botões de navegação */}
         <div className="absolute top-6 left-4 md:left-8 flex gap-3">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 text-white">
             <ChevronLeft className="w-5 h-5" />
@@ -71,12 +64,10 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
           </Button>
         </div>
         
-        {/* Botão favorito */}
         <Button variant="ghost" size="icon" onClick={() => toggleFavorite(place.id!)} className="absolute top-6 right-4 md:right-8 rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30">
           <Heart className={`w-5 h-5 ${isFavorite ? 'fill-error text-error' : 'text-white'}`} />
         </Button>
         
-        {/* Título e info principal */}
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
           <Badge className="mb-3 tag-badge bg-white/20 backdrop-blur-md text-white border-0">{place.category}</Badge>
           <h1 className="text-4xl md:text-5xl font-black mb-2">{place.title}</h1>
@@ -94,18 +85,14 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
         </div>
       </div>
       
-      {/* Conteúdo */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Coluna principal */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Descrição */}
             <section className="fun-card p-6 md:p-8">
               <h2 className="text-2xl font-bold mb-4">Sobre</h2>
               <div className="prose prose-lg" dangerouslySetInnerHTML={{ __html: place.description }} />
             </section>
             
-            {/* 🆕 Galeria de imagens com react-photo-album */}
             {photos.length > 0 && (
               <section className="fun-card p-6 md:p-8">
                 <h2 className="text-2xl font-bold mb-4">Galeria</h2>
@@ -123,11 +110,9 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
               </section>
             )}
             
-            {/* Avaliações */}
             <section className="fun-card p-6 md:p-8">
               <h2 className="text-2xl font-bold mb-6">Avaliações</h2>
               
-              {/* Formulário de review */}
               <form onSubmit={handleSubmitReview} className="mb-8 p-5 bg-white/50 rounded-2xl">
                 <h3 className="font-semibold mb-3">Deixe sua avaliação</h3>
                 <div className="flex items-center gap-1 mb-3">
@@ -141,7 +126,6 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
                 <Button type="submit" className="btn-pop">Enviar avaliação</Button>
               </form>
               
-              {/* Lista de reviews */}
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-4">
                   {reviews.map((review) => (
@@ -167,9 +151,7 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
             </section>
           </div>
           
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Informações de contato */}
             <div className="fun-card p-6">
               <h3 className="text-xl font-bold mb-4">Informações</h3>
               <div className="space-y-3">
@@ -194,16 +176,15 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
                 )}
               </div>
               
-              {/* Redes sociais */}
               <div className="flex gap-4 mt-6">
                 {place.socialMedia.instagram && (
                   <a href={place.socialMedia.instagram} target="_blank" className="p-2 rounded-full bg-white/50 hover:bg-primary/20">
-                    <Instagram className="w-5 h-5" />
+                    <span className="font-bold">IG</span>
                   </a>
                 )}
                 {place.socialMedia.facebook && (
                   <a href={place.socialMedia.facebook} target="_blank" className="p-2 rounded-full bg-white/50 hover:bg-primary/20">
-                    <Facebook className="w-5 h-5" />
+                    <span className="font-bold">FB</span>
                   </a>
                 )}
                 {place.socialMedia.website && (
@@ -214,7 +195,6 @@ export default function PlaceDetailClient({ place }: PlaceDetailClientProps) {
               </div>
             </div>
             
-            {/* Mapa */}
             <div className="fun-card p-6">
               <h3 className="text-xl font-bold mb-4">Localização</h3>
               <div className="h-64 rounded-xl overflow-hidden">
